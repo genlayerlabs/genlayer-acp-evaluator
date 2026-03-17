@@ -1,4 +1,4 @@
-# { "Depends": "" }
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
 from genlayer import *
 from dataclasses import dataclass
@@ -29,10 +29,15 @@ class JobRecord:
 
 
 class AcpEvaluator(gl.Contract):
+    owner: Address
     jobs: TreeMap[str, JobRecord]
 
     def __init__(self):
-        pass
+        self.owner = gl.message.sender_address
+
+    @gl.public.view
+    def get_owner(self) -> str:
+        return self.owner.as_hex
 
     @gl.public.write
     def submit_job(
@@ -42,14 +47,16 @@ class AcpEvaluator(gl.Contract):
         submission: str,
         rubric: str,
         metadata_json: str
-    ) -> TreeMap[str, typing.Any]:
+    ) -> dict[str, typing.Any]:
+        if gl.message.sender_address != self.owner:
+            raise gl.vm.UserError("Only owner can submit jobs")
+
         metadata = json.loads(metadata_json) if metadata_json else {}
         rubric_version = metadata.get("rubric_version", "v1")
         score_tolerance = int(metadata.get("score_tolerance", 10))
         confidence_tolerance = int(metadata.get("confidence_tolerance", 15))
 
-        def generate_eval() -> dict:
-            prompt = f"""
+        eval_prompt = f"""
 You are evaluating a provider submission against a rubric.
 
 TASK SPEC:
@@ -67,7 +74,6 @@ Return strict JSON with:
 - confidence: integer 0..100
 - reasoning: short explanation
 """
-            return gl.nondet.exec_prompt(prompt, response_format="json")
 
         def normalize(x: dict) -> dict:
             return {
@@ -85,7 +91,7 @@ Return strict JSON with:
             return "reject"
 
         def leader_fn():
-            raw = generate_eval()
+            raw = gl.nondet.exec_prompt(eval_prompt, response_format="json")
             return normalize(raw)
 
         def validator_fn(leader_result) -> bool:
@@ -101,16 +107,16 @@ Return strict JSON with:
             if not (0 <= proposed["confidence"] <= 100):
                 return False
 
-            local = normalize(generate_eval())
+            local_raw = gl.nondet.exec_prompt(eval_prompt, response_format="json")
+            local = normalize(local_raw)
 
             same_band = band(proposed["score"]) == band(local["score"])
             close_score = abs(proposed["score"] - local["score"]) <= score_tolerance
             close_confidence = abs(proposed["confidence"] - local["confidence"]) <= confidence_tolerance
 
-            # Ignore exact reasoning string equality.
             return same_band and close_score and close_confidence
 
-        result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+        result = gl.vm.run_nondet(leader_fn, validator_fn)
 
         stored_result = EvalResult(
             verdict=result["verdict"],
@@ -139,7 +145,7 @@ Return strict JSON with:
         }
 
     @gl.public.view
-    def get_job(self, job_id: str) -> TreeMap[str, typing.Any]:
+    def get_job(self, job_id: str) -> JobRecord:
         return self.jobs.get(
             job_id,
             JobRecord(

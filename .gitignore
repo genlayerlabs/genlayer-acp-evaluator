@@ -2,3 +2,6 @@ node_modules/
 dist/
 .env
 *.tsbuildinfo
+artifacts/
+.pytest_cache/
+__pycache__/

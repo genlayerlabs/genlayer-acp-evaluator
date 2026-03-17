@@ -1,5 +1,7 @@
+import type { Hash } from "genlayer-js/types";
+
 type RecordEntry = {
-  txHash: `0x${string}`;
+  txHash: Hash;
   finalized: boolean;
   acceptedReceipt?: unknown;
   finalizedReceipt?: unknown;

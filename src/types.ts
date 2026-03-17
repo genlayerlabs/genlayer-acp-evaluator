@@ -1,3 +1,5 @@
+import type { Hash } from "genlayer-js/types";
+
 export type EvalVerdict = "approve" | "reject" | "needs_review";
 
 export type EvalResult = {
@@ -32,7 +34,7 @@ export type SubmitEvalRequest = {
 };
 
 export type SubmitEvalResponse = {
-  txHash: `0x${string}`;
+  txHash: Hash;
   finalized: boolean;
   job: StoredJob;
 };

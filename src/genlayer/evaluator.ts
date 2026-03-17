@@ -1,5 +1,6 @@
 import { glClient } from "./client.js";
 import { TransactionStatus } from "genlayer-js/types";
+import type { Hash } from "genlayer-js/types";
 import type { StoredJob, SubmitEvalRequest } from "../types.js";
 
 const CONTRACT_ADDRESS = process.env
@@ -51,7 +52,7 @@ export async function getJob(jobId: string) {
   })) as StoredJob;
 }
 
-export async function waitForFinality(txHash: `0x${string}`) {
+export async function waitForFinality(txHash: Hash) {
   return glClient.waitForTransactionReceipt({
     hash: txHash,
     status: TransactionStatus.FINALIZED,
@@ -60,7 +61,7 @@ export async function waitForFinality(txHash: `0x${string}`) {
   });
 }
 
-export async function appealTransaction(txHash: `0x${string}`) {
+export async function appealTransaction(txHash: Hash) {
   const appealTxHash = await glClient.appealTransaction({
     txId: txHash
   });
