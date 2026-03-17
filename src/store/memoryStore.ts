@@ -19,6 +19,13 @@ export function getRecord(jobId: string) {
   return records.get(jobId);
 }
 
+export function getAllRecords() {
+  return Array.from(records.entries()).map(([jobId, record]) => ({
+    jobId,
+    ...record
+  }));
+}
+
 export function updateRecord(jobId: string, partial: Partial<RecordEntry>) {
   const prev = records.get(jobId);
   if (!prev) return;

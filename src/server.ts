@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { submitEvalSchema } from "./utils/validate.js";
 import { submitJob, getJob, waitForFinality, appealTransaction } from "./genlayer/evaluator.js";
-import { getRecord, putRecord, updateRecord } from "./store/memoryStore.js";
+import { getAllRecords, getRecord, putRecord, updateRecord } from "./store/memoryStore.js";
 
 const app = express();
 app.use(express.json());
@@ -51,6 +51,19 @@ app.post("/acp/evaluate", async (req, res) => {
       error: err instanceof Error ? err.message : "unknown_error"
     });
   }
+});
+
+app.get("/evaluations", (_req, res) => {
+  const records = getAllRecords();
+  return res.json({
+    jobs: records.map(r => ({
+      jobId: r.jobId,
+      txHash: r.txHash,
+      finalized: r.finalized,
+      job: r.latestJob ?? null,
+    })),
+    count: records.length,
+  });
 });
 
 app.get("/evaluations/:jobId", async (req, res) => {
