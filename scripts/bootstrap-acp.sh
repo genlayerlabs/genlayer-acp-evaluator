@@ -1,37 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "== ACP bootstrap =="
-
-echo "1) Install ACP CLI if you have not already:"
-echo "   git clone https://github.com/Virtual-Protocol/openclaw-acp virtuals-protocol-acp"
-echo "   cd virtuals-protocol-acp"
-echo "   npm install"
-echo "   npm link"
-echo "   acp setup"
+echo "== GenLayer ACP Evaluator — Setup Guide =="
 
 echo
-echo "2) In ACP UI:"
-echo "   - Connect wallet"
-echo "   - Join ACP"
+echo "1) Register agent at https://app.virtuals.io/acp/join"
+echo "   - Connect Base wallet"
 echo "   - Register New Agent"
-echo "   - Set role to Evaluator"
-echo "   - Fill business description"
-echo "   - Fund agent wallet if needed"
+echo "   - Role: Evaluator"
+echo "   - Name: GenLayer Evaluator"
+echo "   - Create smart wallet, whitelist your dev wallet"
 
 echo
-echo "3) Scaffold the offering:"
-echo "   acp sell init genlayer_eval"
+echo "2) Add job offering in the Offerings section:"
+echo "   - Job Name: GenLayer Evaluation"
+echo "   - Price: 0.01 USDC (for testing)"
+echo "   - SLA: 10 minutes"
+echo "   - Description: Evaluates deliverables using onchain GenLayer"
+echo "     Intelligent Contracts with validator-based equivalence checks"
 
 echo
-echo "4) Replace scaffolded files with:"
-echo "   acp/src/seller/offerings/genlayer_eval/offering.json"
-echo "   acp/src/seller/offerings/genlayer_eval/handlers.ts"
+echo "3) Note your credentials:"
+echo "   - ACP_WALLET_PRIVATE_KEY  (your whitelisted wallet)"
+echo "   - ACP_ENTITY_ID           (from agent dashboard)"
+echo "   - ACP_AGENT_WALLET_ADDRESS (your agent's smart wallet)"
 
 echo
-echo "5) Register offering:"
-echo "   acp sell create genlayer_eval"
+echo "4) Deploy GenLayer contract:"
+echo "   genlayer deploy --network studionet"
+echo "   # Save the printed GENLAYER_EVALUATOR_ADDRESS"
 
 echo
-echo "6) Start seller runtime:"
-echo "   acp serve start"
+echo "5) Set env vars and start:"
+echo "   cp .env.example .env"
+echo "   # Fill in all values"
+echo "   npm run dev"

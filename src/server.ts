@@ -1,11 +1,17 @@
 import "dotenv/config";
+import path from "path";
 import express from "express";
 import { submitEvalSchema } from "./utils/validate.js";
 import { submitJob, getJob, waitForFinality, appealTransaction } from "./genlayer/evaluator.js";
 import { getAllRecords, getRecord, putRecord, updateRecord } from "./store/memoryStore.js";
+import { startAcpListener } from "./acp/listener.js";
 
 const app = express();
 app.use(express.json());
+
+// Serve dashboard static build if present
+const dashboardPath = path.resolve(import.meta.dirname, "../../dashboard/dist");
+app.use(express.static(dashboardPath));
 
 function authOk(req: express.Request) {
   const token = process.env.API_AUTH_TOKEN;
@@ -108,7 +114,15 @@ app.post("/evaluations/:jobId/appeal", async (req, res) => {
   }
 });
 
+// SPA fallback — serve dashboard for any non-API route
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(dashboardPath, "index.html"), (err) => {
+    if (err) res.status(404).json({ error: "not_found" });
+  });
+});
+
 const port = Number(process.env.PORT ?? 3000);
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`GenLayer ACP evaluator listening on :${port}`);
+  await startAcpListener();
 });

@@ -6,10 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
+      '/evaluations': 'http://localhost:3000',
+      '/acp': 'http://localhost:3000',
     },
   },
 });

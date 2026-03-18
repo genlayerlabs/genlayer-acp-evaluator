@@ -1,6 +1,6 @@
 import type { Job } from './types';
 
-const API_BASE = '/api';
+const API_BASE = '';
 
 const MOCK_JOBS: Job[] = [
   {
