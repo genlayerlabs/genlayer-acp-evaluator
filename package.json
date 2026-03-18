@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:integration": "vitest run tests/integration/ --timeout 300000"
+    "test:integration": "vitest run tests/integration/ --testTimeout 300000 --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@virtuals-protocol/acp-node": "^0.3.0-beta.39",

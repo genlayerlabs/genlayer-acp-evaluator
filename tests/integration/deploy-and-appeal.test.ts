@@ -9,6 +9,7 @@
  * These tests are slow (real consensus) and cost gas. Do not run in CI.
  */
 
+import "dotenv/config";
 import { describe, it, expect, beforeAll } from "vitest";
 import { readFileSync } from "fs";
 import path from "path";
