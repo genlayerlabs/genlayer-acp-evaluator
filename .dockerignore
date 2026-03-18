@@ -1,0 +1,14 @@
+node_modules
+dist
+dashboard
+tests
+contracts
+acp
+scripts
+deploy
+artifacts
+.pytest_cache
+__pycache__
+.env
+*.md
+LICENSE
