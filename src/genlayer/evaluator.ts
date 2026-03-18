@@ -1,55 +1,87 @@
+import { readFileSync } from "fs";
+import path from "path";
 import { glClient } from "./client.js";
 import { TransactionStatus } from "genlayer-js/types";
 import type { Hash } from "genlayer-js/types";
-import type { StoredJob, SubmitEvalRequest } from "../types.js";
+import type { SubmitEvalRequest } from "../types.js";
 
-const CONTRACT_ADDRESS = process.env
-  .GENLAYER_EVALUATOR_ADDRESS as `0x${string}`;
+const contractCode = new Uint8Array(
+  readFileSync(path.resolve(import.meta.dirname, "../../../contracts/acp_evaluator.py")),
+);
 
-if (!CONTRACT_ADDRESS) {
-  throw new Error("Missing GENLAYER_EVALUATOR_ADDRESS");
+let consensusInitialized = false;
+
+async function ensureConsensus() {
+  if (!consensusInitialized) {
+    await glClient.initializeConsensusSmartContract();
+    consensusInitialized = true;
+  }
 }
 
-export async function submitJob(input: SubmitEvalRequest) {
-  const txHash = await glClient.writeContract({
-    address: CONTRACT_ADDRESS,
-    functionName: "submit_job",
+export type EvalDeployResult = {
+  txHash: Hash;
+  contractAddress: `0x${string}`;
+  result: {
+    verdict: string;
+    score: number;
+    confidence: number;
+    reasoning: string;
+    rubric_version: string;
+    success: boolean;
+  };
+};
+
+export async function deployEvaluation(input: SubmitEvalRequest): Promise<EvalDeployResult> {
+  await ensureConsensus();
+
+  const txHash = await glClient.deployContract({
+    code: contractCode,
     args: [
-      input.jobId,
       input.taskSpec,
       input.submission,
       input.rubric,
-      JSON.stringify(input.metadata ?? {})
+      JSON.stringify(input.metadata ?? {}),
     ],
-    value: 0n
-  });
+  }) as Hash;
 
-  const acceptedReceipt = await glClient.waitForTransactionReceipt({
+  const receipt = await glClient.waitForTransactionReceipt({
     hash: txHash,
     status: TransactionStatus.ACCEPTED,
     retries: 180,
-    interval: 5000
+    interval: 5000,
   });
 
-  const job = (await glClient.readContract({
-    address: CONTRACT_ADDRESS,
-    functionName: "get_job",
-    args: [input.jobId]
-  })) as StoredJob;
+  const contractAddress =
+    (receipt as any).data?.contract_address ??
+    (receipt as any).txDataDecoded?.contractAddress;
 
-  return {
-    txHash,
-    acceptedReceipt,
-    job
-  };
+  if (!contractAddress) {
+    throw new Error("Failed to extract contract address from deploy receipt");
+  }
+
+  const result = await glClient.readContract({
+    address: contractAddress,
+    functionName: "get_result",
+    args: [],
+  }) as EvalDeployResult["result"];
+
+  return { txHash, contractAddress, result };
 }
 
-export async function getJob(jobId: string) {
-  return (await glClient.readContract({
-    address: CONTRACT_ADDRESS,
-    functionName: "get_job",
-    args: [jobId]
-  })) as StoredJob;
+export async function readResult(contractAddress: `0x${string}`) {
+  return glClient.readContract({
+    address: contractAddress,
+    functionName: "get_result",
+    args: [],
+  }) as Promise<EvalDeployResult["result"]>;
+}
+
+export async function readInput(contractAddress: `0x${string}`) {
+  return glClient.readContract({
+    address: contractAddress,
+    functionName: "get_input",
+    args: [],
+  });
 }
 
 export async function waitForFinality(txHash: Hash) {
@@ -57,20 +89,20 @@ export async function waitForFinality(txHash: Hash) {
     hash: txHash,
     status: TransactionStatus.FINALIZED,
     retries: 3600,
-    interval: 3000
+    interval: 3000,
   });
 }
 
 export async function appealTransaction(txHash: Hash) {
   const appealTxHash = await glClient.appealTransaction({
-    txId: txHash
+    txId: txHash,
   });
 
   const receipt = await glClient.waitForTransactionReceipt({
-    hash: appealTxHash,
+    hash: appealTxHash as Hash,
     status: TransactionStatus.ACCEPTED,
-    retries: 180,
-    interval: 5000
+    retries: 360,
+    interval: 5000,
   });
 
   return { appealTxHash, receipt };

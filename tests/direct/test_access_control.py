@@ -1,19 +1,9 @@
-"""Tests for owner access control — deterministic, no mocks needed."""
+"""Tests for deploy-time evaluation."""
 
 import json
 
-from tests.direct.conftest import to_hex
 
-
-def test_deployer_is_owner(direct_vm, direct_deploy, direct_owner):
-    contract = direct_deploy("contracts/acp_evaluator.py")
-    assert contract.get_owner() == to_hex(direct_owner)
-
-
-def test_owner_can_submit_job(direct_vm, direct_deploy, direct_owner):
-    contract = direct_deploy("contracts/acp_evaluator.py")
-    direct_vm.sender = direct_owner
-
+def test_deploy_stores_result(direct_vm, direct_deploy):
     direct_vm.mock_llm(
         r".*evaluating a provider submission.*",
         json.dumps({
@@ -24,38 +14,76 @@ def test_owner_can_submit_job(direct_vm, direct_deploy, direct_owner):
         }),
     )
 
-    result = contract.submit_job(
-        "job-1",
+    contract = direct_deploy(
+        "contracts/acp_evaluator.py",
         "Write a poem",
         "Roses are red...",
         "Must rhyme",
         json.dumps({"rubric_version": "v1"}),
     )
 
-    assert result["job_id"] == "job-1"
+    result = contract.get_result()
     assert result["verdict"] == "approve"
+    assert result["score"] == 85
+    assert result["confidence"] == 90
+    assert result["success"] is True
 
 
-def test_non_owner_cannot_submit_job(direct_vm, direct_deploy, direct_alice):
-    contract = direct_deploy("contracts/acp_evaluator.py")
-    direct_vm.sender = direct_alice
+def test_deploy_stores_input(direct_vm, direct_deploy):
+    direct_vm.mock_llm(
+        r".*evaluating a provider submission.*",
+        json.dumps({
+            "verdict": "reject",
+            "score": 20,
+            "confidence": 95,
+            "reasoning": "Poor quality"
+        }),
+    )
 
-    with direct_vm.expect_revert("Only owner can submit jobs"):
-        contract.submit_job(
-            "job-1",
-            "Write a poem",
-            "Roses are red...",
-            "Must rhyme",
-            "{}",
-        )
+    contract = direct_deploy(
+        "contracts/acp_evaluator.py",
+        "task spec", "submission text", "rubric text", "{}",
+    )
+
+    inp = contract.get_input()
+    assert inp["task_spec"] == "task spec"
+    assert inp["submission"] == "submission text"
+    assert inp["rubric"] == "rubric text"
 
 
-def test_different_non_owners_all_rejected(
-    direct_vm, direct_deploy, direct_alice, direct_bob
-):
-    contract = direct_deploy("contracts/acp_evaluator.py")
+def test_rubric_version_from_metadata(direct_vm, direct_deploy):
+    direct_vm.mock_llm(
+        r".*evaluating a provider submission.*",
+        json.dumps({
+            "verdict": "approve",
+            "score": 80,
+            "confidence": 80,
+            "reasoning": "Ok"
+        }),
+    )
 
-    for sender in [direct_alice, direct_bob]:
-        direct_vm.sender = sender
-        with direct_vm.expect_revert("Only owner can submit jobs"):
-            contract.submit_job("job-x", "spec", "sub", "rubric", "{}")
+    contract = direct_deploy(
+        "contracts/acp_evaluator.py",
+        "spec", "sub", "rubric", json.dumps({"rubric_version": "v2"}),
+    )
+
+    assert contract.get_result()["rubric_version"] == "v2"
+
+
+def test_default_rubric_version(direct_vm, direct_deploy):
+    direct_vm.mock_llm(
+        r".*evaluating a provider submission.*",
+        json.dumps({
+            "verdict": "approve",
+            "score": 80,
+            "confidence": 80,
+            "reasoning": "Ok"
+        }),
+    )
+
+    contract = direct_deploy(
+        "contracts/acp_evaluator.py",
+        "spec", "sub", "rubric", "",
+    )
+
+    assert contract.get_result()["rubric_version"] == "v1"

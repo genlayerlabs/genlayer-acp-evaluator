@@ -11,12 +11,16 @@ beforeEach(async () => {
 });
 
 const fakeHash = ("0x" + "ab".repeat(32)) as Hash;
+const fakeAddr = "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`;
+const fakeResult = { verdict: "approve", score: 85, confidence: 90, reasoning: "ok", rubric_version: "v1", success: true };
 
 describe("memoryStore", () => {
   it("putRecord and getRecord round-trip", () => {
     store.putRecord("job-1", {
       txHash: fakeHash,
+      contractAddress: fakeAddr,
       finalized: false,
+      result: fakeResult,
       updatedAt: "2026-01-01T00:00:00.000Z"
     });
 
@@ -33,7 +37,9 @@ describe("memoryStore", () => {
   it("updateRecord merges partial fields", () => {
     store.putRecord("job-2", {
       txHash: fakeHash,
+      contractAddress: fakeAddr,
       finalized: false,
+      result: fakeResult,
       updatedAt: "2026-01-01T00:00:00.000Z"
     });
 

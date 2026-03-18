@@ -2,10 +2,9 @@ import type { Hash } from "genlayer-js/types";
 
 type RecordEntry = {
   txHash: Hash;
+  contractAddress: `0x${string}`;
   finalized: boolean;
-  acceptedReceipt?: unknown;
-  finalizedReceipt?: unknown;
-  latestJob?: unknown;
+  result: unknown;
   updatedAt: string;
 };
 
@@ -22,7 +21,7 @@ export function getRecord(jobId: string) {
 export function getAllRecords() {
   return Array.from(records.entries()).map(([jobId, record]) => ({
     jobId,
-    ...record
+    ...record,
   }));
 }
 
@@ -32,6 +31,6 @@ export function updateRecord(jobId: string, partial: Partial<RecordEntry>) {
   records.set(jobId, {
     ...prev,
     ...partial,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   });
 }

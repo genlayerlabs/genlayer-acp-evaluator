@@ -2,14 +2,13 @@ import "dotenv/config";
 import path from "path";
 import express from "express";
 import { submitEvalSchema } from "./utils/validate.js";
-import { submitJob, getJob, waitForFinality, appealTransaction } from "./genlayer/evaluator.js";
+import { deployEvaluation, readResult, waitForFinality, appealTransaction } from "./genlayer/evaluator.js";
 import { getAllRecords, getRecord, putRecord, updateRecord } from "./store/memoryStore.js";
 import { startAcpListener } from "./acp/listener.js";
 
 const app = express();
 app.use(express.json());
 
-// Serve dashboard static build if present
 const dashboardPath = path.resolve(import.meta.dirname, "../../dashboard/dist");
 app.use(express.static(dashboardPath));
 
@@ -24,37 +23,28 @@ app.post("/acp/evaluate", async (req, res) => {
     if (!authOk(req)) return res.status(401).json({ error: "unauthorized" });
 
     const parsed = submitEvalSchema.parse(req.body);
-
-    const { txHash, acceptedReceipt, job } = await submitJob(parsed);
+    const { txHash, contractAddress, result } = await deployEvaluation(parsed);
 
     putRecord(parsed.jobId, {
       txHash,
+      contractAddress,
       finalized: false,
-      acceptedReceipt,
-      latestJob: job,
-      updatedAt: new Date().toISOString()
+      result,
+      updatedAt: new Date().toISOString(),
     });
 
     void waitForFinality(txHash)
-      .then(async (finalizedReceipt) => {
-        const refreshedJob = await getJob(parsed.jobId);
-        updateRecord(parsed.jobId, {
-          finalized: true,
-          finalizedReceipt,
-          latestJob: refreshedJob
-        });
+      .then(async () => {
+        const refreshed = await readResult(contractAddress);
+        updateRecord(parsed.jobId, { finalized: true, result: refreshed });
       })
       .catch(() => {});
 
-    return res.json({
-      txHash,
-      finalized: false,
-      job
-    });
+    return res.json({ txHash, contractAddress, finalized: false, result });
   } catch (err) {
     console.error(err);
     return res.status(400).json({
-      error: err instanceof Error ? err.message : "unknown_error"
+      error: err instanceof Error ? err.message : "unknown_error",
     });
   }
 });
@@ -62,11 +52,12 @@ app.post("/acp/evaluate", async (req, res) => {
 app.get("/evaluations", (_req, res) => {
   const records = getAllRecords();
   return res.json({
-    jobs: records.map(r => ({
+    jobs: records.map((r) => ({
       jobId: r.jobId,
       txHash: r.txHash,
+      contractAddress: r.contractAddress,
       finalized: r.finalized,
-      job: r.latestJob ?? null,
+      result: r.result,
     })),
     count: records.length,
   });
@@ -74,20 +65,21 @@ app.get("/evaluations", (_req, res) => {
 
 app.get("/evaluations/:jobId", async (req, res) => {
   try {
-    const jobId = req.params.jobId;
-    const record = getRecord(jobId);
-    const job = await getJob(jobId);
+    const record = getRecord(req.params.jobId);
+    if (!record) return res.status(404).json({ error: "not_found" });
 
+    const result = await readResult(record.contractAddress);
     return res.json({
-      jobId,
-      txHash: record?.txHash ?? null,
-      finalized: record?.finalized ?? false,
-      job
+      jobId: req.params.jobId,
+      txHash: record.txHash,
+      contractAddress: record.contractAddress,
+      finalized: record.finalized,
+      result,
     });
   } catch (err) {
     console.error(err);
     return res.status(404).json({
-      error: err instanceof Error ? err.message : "not_found"
+      error: err instanceof Error ? err.message : "not_found",
     });
   }
 });
@@ -99,22 +91,22 @@ app.post("/evaluations/:jobId/appeal", async (req, res) => {
     const record = getRecord(req.params.jobId);
     if (!record) return res.status(404).json({ error: "unknown_job" });
 
-    const result = await appealTransaction(record.txHash);
+    const { appealTxHash } = await appealTransaction(record.txHash);
 
     return res.json({
       jobId: req.params.jobId,
       txHash: record.txHash,
-      appealTxHash: result.appealTxHash
+      appealTxHash,
+      contractAddress: record.contractAddress,
     });
   } catch (err) {
     console.error(err);
     return res.status(400).json({
-      error: err instanceof Error ? err.message : "appeal_failed"
+      error: err instanceof Error ? err.message : "appeal_failed",
     });
   }
 });
 
-// SPA fallback — serve dashboard for any non-API route
 app.get("*", (_req, res) => {
   res.sendFile(path.join(dashboardPath, "index.html"), (err) => {
     if (err) res.status(404).json({ error: "not_found" });

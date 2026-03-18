@@ -2,7 +2,7 @@ import AcpClient, {
   AcpContractClientV2,
   type AcpJob,
 } from "@virtuals-protocol/acp-node";
-import { submitJob, getJob, waitForFinality } from "../genlayer/evaluator.js";
+import { deployEvaluation, readResult, waitForFinality } from "../genlayer/evaluator.js";
 import { putRecord, updateRecord } from "../store/memoryStore.js";
 
 export async function startAcpListener() {
@@ -35,7 +35,7 @@ export async function startAcpListener() {
         const jobId = `acp-${job.id}`;
         const taskSpec = (job as any).requirement ?? "";
 
-        const result = await submitJob({
+        const { txHash, contractAddress, result } = await deployEvaluation({
           jobId,
           taskSpec,
           submission: deliverable,
@@ -44,27 +44,26 @@ export async function startAcpListener() {
         });
 
         putRecord(jobId, {
-          txHash: result.txHash,
+          txHash,
+          contractAddress,
           finalized: false,
-          acceptedReceipt: result.acceptedReceipt,
-          latestJob: result.job,
+          result,
           updatedAt: new Date().toISOString(),
         });
 
-        const approved = result.job.result.verdict === "approve";
-        const reasoning = result.job.result.reasoning;
+        const approved = result.verdict === "approve";
 
         await job.evaluate(
           approved,
-          `[Score: ${result.job.result.score}/100, Confidence: ${result.job.result.confidence}/100] ${reasoning}`,
+          `[Score: ${result.score}/100, Confidence: ${result.confidence}/100] ${result.reasoning}`,
         );
 
-        console.log(`[ACP] Job ${job.id} evaluated: ${approved ? "APPROVED" : "REJECTED"} (score: ${result.job.result.score})`);
+        console.log(`[ACP] Job ${job.id} evaluated: ${approved ? "APPROVED" : "REJECTED"} (score: ${result.score})`);
 
-        void waitForFinality(result.txHash)
+        void waitForFinality(txHash)
           .then(async () => {
-            const refreshed = await getJob(jobId);
-            updateRecord(jobId, { finalized: true, latestJob: refreshed });
+            const refreshed = await readResult(contractAddress);
+            updateRecord(jobId, { finalized: true, result: refreshed });
           })
           .catch(() => {});
       } catch (err) {
