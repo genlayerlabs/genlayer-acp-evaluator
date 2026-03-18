@@ -90,15 +90,15 @@ describe("GenLayer ACP Evaluator — Integration", () => {
       expect(result.rubric_version).toBe("v1");
     }, 120_000);
 
-    it("stores input data on contract", async () => {
+    it("stores input data and evaluates a clearly bad submission", async () => {
+      const taskSpec = "Write a Python function that sorts a list of integers using merge sort. Include docstring, type hints, and handle edge cases (empty list, single element).";
+      const submission = "def sort(x): return x";
+      const rubric = "Correctness (40%): Must implement merge sort, not just return input. Documentation (20%): Must have docstring and type hints. Edge cases (20%): Must handle empty/single element. Code quality (20%): Clean, readable code. Minimum 70 for approval.";
+      const metadata = JSON.stringify({ rubric_version: "v2", score_tolerance: 15 });
+
       const txHash = await client.deployContract({
         code: contractCode,
-        args: [
-          "Test task",
-          "Test submission",
-          "Test rubric",
-          JSON.stringify({ rubric_version: "v2", score_tolerance: 15 }),
-        ],
+        args: [taskSpec, submission, rubric, metadata],
       }) as Hash;
 
       console.log(`[test2] Deploy tx: ${txHash}`);
@@ -110,22 +110,19 @@ describe("GenLayer ACP Evaluator — Integration", () => {
         interval: 5000,
       });
 
-      console.log(`[test2] Receipt status: ${(receipt as any).status}`);
-      console.log(`[test2] Receipt data:`, JSON.stringify((receipt as any).data ?? null));
-      console.log(`[test2] Receipt txDataDecoded:`, JSON.stringify((receipt as any).txDataDecoded ?? null));
+      const status = String((receipt as any).status);
+      console.log(`[test2] Status: ${status} (5=ACCEPTED, 6=UNDETERMINED)`);
 
       const contractAddress =
         (receipt as any).data?.contract_address ??
         (receipt as any).txDataDecoded?.contractAddress;
 
-      console.log(`[test2] Contract address: ${contractAddress}`);
+      console.log(`[test2] Contract: ${contractAddress}`);
+      expect(contractAddress).toBeTruthy();
 
-      const status = (receipt as any).status;
-      console.log(`[test2] Decided status: ${status} (5=ACCEPTED, 6=UNDETERMINED)`);
-
-      if (String(status) === "6" || status === "UNDETERMINED") {
-        console.log(`[test2] UNDETERMINED — validators disagreed. Contract state unavailable. This is expected on testnet with real LLMs.`);
-        return; // pass — we confirmed the deploy reached consensus (even if negative)
+      if (status === "6" || status === "UNDETERMINED") {
+        console.log(`[test2] UNDETERMINED — skipping readContract`);
+        return;
       }
 
       const input = await client.readContract({
@@ -135,9 +132,20 @@ describe("GenLayer ACP Evaluator — Integration", () => {
       }) as any;
 
       console.log(`[test2] Input:`, input);
-      expect(input.task_spec).toBe("Test task");
-      expect(input.submission).toBe("Test submission");
-      expect(input.rubric).toBe("Test rubric");
+      expect(input.task_spec).toBe(taskSpec);
+      expect(input.submission).toBe(submission);
+      expect(input.rubric).toBe(rubric);
+
+      const result = await client.readContract({
+        address: contractAddress,
+        functionName: "get_result",
+        args: [],
+      }) as any;
+
+      console.log(`[test2] Result:`, result);
+      // "def sort(x): return x" should be clearly rejected by all validators
+      expect(result.verdict).toBe("reject");
+      expect(result.score).toBeLessThan(40);
     }, 300_000);
   });
 

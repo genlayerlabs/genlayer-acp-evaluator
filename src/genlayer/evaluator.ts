@@ -31,6 +31,15 @@ export type EvalDeployResult = {
   };
 };
 
+const UNDETERMINED_RESULT: EvalDeployResult["result"] = {
+  verdict: "error",
+  score: 0,
+  confidence: 0,
+  reasoning: "Consensus failed — validators could not agree on the evaluation. The transaction reached UNDETERMINED status.",
+  rubric_version: "",
+  success: false,
+};
+
 export async function deployEvaluation(input: SubmitEvalRequest): Promise<EvalDeployResult> {
   await ensureConsensus();
 
@@ -51,12 +60,19 @@ export async function deployEvaluation(input: SubmitEvalRequest): Promise<EvalDe
     interval: 5000,
   });
 
+  const status = String((receipt as any).status);
+  const isUndetermined = status === "6" || status === "UNDETERMINED";
+
   const contractAddress =
     (receipt as any).data?.contract_address ??
     (receipt as any).txDataDecoded?.contractAddress;
 
   if (!contractAddress) {
     throw new Error("Failed to extract contract address from deploy receipt");
+  }
+
+  if (isUndetermined) {
+    return { txHash, contractAddress, result: UNDETERMINED_RESULT };
   }
 
   const result = await glClient.readContract({
