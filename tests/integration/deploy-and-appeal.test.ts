@@ -193,15 +193,10 @@ describe("GenLayer ACP Evaluator — Integration", () => {
 
       console.log(`[appeal] Result before appeal:`, resultBefore);
 
-      // Query the minimum appeal bond
-      const minBond = await client.getMinAppealBond({ txId: txHash });
-      console.log(`[appeal] Min appeal bond: ${minBond} wei (${Number(minBond) / 1e18} GEN)`);
-
-      // Submit appeal — auto-queries bond if not provided, but let's be explicit
-      console.log(`[appeal] Submitting appeal with bond ${minBond}...`);
+      // Submit appeal — auto-queries bond on chains with FeeManager, 0 otherwise
+      console.log(`[appeal] Submitting appeal...`);
       const appealResult = await client.appealTransaction({
         txId: txHash,
-        value: minBond,
       });
       console.log(`[appeal] appealTransaction returned:`, appealResult);
 
