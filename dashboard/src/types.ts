@@ -1,4 +1,4 @@
-export type EvalVerdict = 'approve' | 'reject' | 'needs_review';
+export type EvalVerdict = 'approve' | 'reject' | 'needs_review' | 'error';
 
 export type EvalResult = {
   verdict: EvalVerdict;
@@ -16,4 +16,9 @@ export type Job = {
   rubric: string;
   metadata_json: string;
   result: EvalResult;
+  tx_hash?: string;
+  contract_address?: string;
+  network?: 'studionet' | 'bradbury';
+  status?: string;
+  appeal_round?: number;
 };

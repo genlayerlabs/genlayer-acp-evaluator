@@ -1,4 +1,5 @@
 import type { Job } from '../types';
+import { getExplorerUrl } from '../api';
 import ScoreRing from './ScoreRing';
 import VerdictBadge from './VerdictBadge';
 
@@ -15,6 +16,8 @@ export default function JobCard({
   index: number;
   onClick: () => void;
 }) {
+  const explorerUrl = getExplorerUrl(job);
+
   return (
     <div
       className="job-card job-card-clickable"
@@ -26,9 +29,15 @@ export default function JobCard({
           <div className="job-id">
             {job.job_id}
             <span className="rubric-tag">{job.result.rubric_version}</span>
+            {job.status && (
+              <span className={`status-tag ${job.status === 'FINALIZED' ? 'finalized' : job.status === 'ACCEPTED' ? 'accepted' : 'pending'}`}>
+                {job.status}
+              </span>
+            )}
           </div>
           <div className="job-requester" title={job.requester}>
             {truncAddr(job.requester)}
+            {job.network && <span className="network-tag">{job.network}</span>}
           </div>
         </div>
         <VerdictBadge verdict={job.result.verdict} />
@@ -41,7 +50,20 @@ export default function JobCard({
 
       <div className="reasoning">{job.result.reasoning}</div>
 
-      <span className="details-toggle">View details &rarr;</span>
+      <div className="card-footer">
+        <span className="details-toggle">View details &rarr;</span>
+        {explorerUrl && (
+          <a
+            className="explorer-link"
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            View on Explorer &#x2197;
+          </a>
+        )}
+      </div>
     </div>
   );
 }

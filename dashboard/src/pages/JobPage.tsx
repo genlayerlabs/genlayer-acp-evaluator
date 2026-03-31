@@ -1,6 +1,11 @@
 import type { Job } from '../types';
+import { getExplorerUrl } from '../api';
 import ScoreRing from '../components/ScoreRing';
 import VerdictBadge from '../components/VerdictBadge';
+
+function truncHash(hash: string): string {
+  return hash.length > 16 ? `${hash.slice(0, 10)}...${hash.slice(-6)}` : hash;
+}
 
 export default function JobPage({
   job,
@@ -9,6 +14,8 @@ export default function JobPage({
   job: Job;
   onBack: () => void;
 }) {
+  const explorerUrl = getExplorerUrl(job);
+
   return (
     <div className="container">
       <div className="job-page-nav">
@@ -22,6 +29,11 @@ export default function JobPage({
           <h1 className="job-page-id">
             {job.job_id}
             <span className="rubric-tag">{job.result.rubric_version}</span>
+            {job.status && (
+              <span className={`status-tag ${job.status === 'FINALIZED' ? 'finalized' : job.status === 'ACCEPTED' ? 'accepted' : 'pending'}`}>
+                {job.status}
+              </span>
+            )}
           </h1>
           <div className="job-page-requester">
             <span className="detail-label-inline">Requester</span>
@@ -30,6 +42,41 @@ export default function JobPage({
         </div>
         <VerdictBadge verdict={job.result.verdict} />
       </div>
+
+      {(job.tx_hash || job.contract_address) && (
+        <div className="onchain-info">
+          {job.tx_hash && (
+            <div className="onchain-row">
+              <span className="detail-label-inline">Transaction</span>
+              {explorerUrl ? (
+                <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="onchain-link">
+                  {truncHash(job.tx_hash)} &#x2197;
+                </a>
+              ) : (
+                <span className="job-page-address">{truncHash(job.tx_hash)}</span>
+              )}
+            </div>
+          )}
+          {job.contract_address && (
+            <div className="onchain-row">
+              <span className="detail-label-inline">Contract</span>
+              <span className="job-page-address">{truncHash(job.contract_address)}</span>
+            </div>
+          )}
+          {job.network && (
+            <div className="onchain-row">
+              <span className="detail-label-inline">Network</span>
+              <span className="network-tag">{job.network}</span>
+            </div>
+          )}
+          {job.appeal_round !== undefined && job.appeal_round > 0 && (
+            <div className="onchain-row">
+              <span className="detail-label-inline">Appeal Round</span>
+              <span className="appeal-round-badge">{job.appeal_round}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="job-page-scores">
         <ScoreRing value={job.result.score} label="Score" size={96} />

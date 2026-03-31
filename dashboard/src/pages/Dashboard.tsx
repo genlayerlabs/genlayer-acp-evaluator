@@ -40,10 +40,9 @@ export default function Dashboard({
         <p>Onchain evaluation results from GenLayer Intelligent Contracts</p>
       </div>
 
-      {isDemo && (
+      {isDemo && !jobs.length && (
         <div className="demo-banner">
-          Demo Mode — showing sample data. Connect to the evaluator service for
-          live results.
+          Connect to the evaluator service for live results.
         </div>
       )}
 

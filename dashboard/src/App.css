@@ -591,6 +591,113 @@ body::before {
   color: var(--text-2);
 }
 
+/* ── STATUS / NETWORK TAGS ── */
+
+.status-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.status-tag.finalized {
+  background: var(--approve-bg);
+  color: var(--approve);
+}
+
+.status-tag.accepted {
+  background: var(--review-bg);
+  color: var(--review);
+}
+
+.status-tag.pending {
+  background: rgba(138, 144, 160, 0.1);
+  color: var(--text-2);
+}
+
+.network-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  background: rgba(138, 144, 160, 0.08);
+  color: var(--text-3);
+  vertical-align: middle;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.explorer-link {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-3);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.explorer-link:hover {
+  color: var(--accent);
+}
+
+/* ── ONCHAIN INFO (job page) ── */
+
+.onchain-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 20px 24px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+}
+
+.onchain-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.onchain-link {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.onchain-link:hover {
+  opacity: 0.75;
+}
+
+.appeal-round-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  border: 1px solid rgba(61, 255, 160, 0.2);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
 /* ── CLICKABLE CARD ── */
 
 .job-card-clickable {
