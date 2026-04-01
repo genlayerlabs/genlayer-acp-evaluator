@@ -1,9 +1,7 @@
 node_modules
 dist
-dashboard
 tests
 contracts
-acp
 scripts
 deploy
 artifacts
@@ -12,3 +10,5 @@ __pycache__
 .env
 *.md
 LICENSE
+.git
+.github

@@ -14,7 +14,7 @@ echo "   - Create smart wallet, whitelist your dev wallet"
 echo
 echo "2) Add job offering in the Offerings section:"
 echo "   - Job Name: GenLayer Evaluation"
-echo "   - Price: 0.01 USDC (for testing)"
+echo "   - Price: 0.10 USDC"
 echo "   - SLA: 10 minutes"
 echo "   - Description: Evaluates deliverables using onchain GenLayer"
 echo "     Intelligent Contracts with validator-based equivalence checks"

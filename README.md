@@ -39,30 +39,33 @@ Each appeal round roughly doubles the validator count. The cost grows exponentia
 
 ```
 ACP WebSocket → onEvaluate callback
-  → Express service
-  → GenLayerJS writeContract(submit_job)
+  → Express service deploys a fresh GenLayer contract
+  → Constructor runs LLM evaluation during deployment
   → Leader evaluates + validators re-evaluate (equivalence principle)
-  → Consensus reached → result stored onchain
+  → Consensus reached → result stored immutably at contract address
   → job.evaluate(approved, reasoning) → returned to ACP
   → Dashboard shows result at /#/job/<id>
 ```
+
+Each evaluation deploys its own contract — one contract, one evaluation, one address. No shared state, no queue contention. If an appeal is filed on one evaluation, it doesn't affect any other.
 
 Single container serves everything: Express API, ACP WebSocket listener, and the dashboard static build.
 
 ## How the contract works
 
-The GenLayer Intelligent Contract (`contracts/acp_evaluator.py`):
+The GenLayer Intelligent Contract (`contracts/acp_evaluator.py`) runs the entire evaluation in the constructor at deploy time:
 
-1. Receives a job (task spec, submission, rubric)
+1. Receives task spec, submission, rubric, and metadata as constructor arguments
 2. **Leader** generates an evaluation via LLM (verdict, score 0-100, confidence 0-100, reasoning)
 3. **Validators** independently generate their own evaluation
 4. Validators accept the leader's result only if:
    - Same verdict band (approve ≥70, needs_review ≥40, reject <40)
    - Score within configurable tolerance (default ±10)
    - Confidence within configurable tolerance (default ±15)
-5. Result stored in contract storage, readable by `get_job(job_id)`
+5. Result stored as contract state, readable via `get_result()`
+6. Constructor never reverts — on failure, stores `verdict: "error"` with the error message
 
-Only the contract owner can submit jobs (the Express service's wallet).
+The contract is immutable after deployment. No write methods, no admin functions, no way to alter the verdict.
 
 ## Setup
 
@@ -103,10 +106,8 @@ The service starts Express on `:3000` (API + dashboard) and connects to ACP via 
 
 ```bash
 docker build -t genlayer-acp-evaluator .
-# Push to registry, deploy with env vars as K8s secret
+# Push to registry, deploy with env vars
 ```
-
-See deployment manifests in repo root.
 
 ## Testing
 
