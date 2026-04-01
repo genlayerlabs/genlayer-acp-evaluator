@@ -15,7 +15,7 @@
     "@virtuals-protocol/acp-node": "^0.3.0-beta.39",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
-    "genlayer-js": "^0.21.3",
+    "genlayer-js": "^0.28.0",
     "viem": "^2.23.6",
     "zod": "^3.24.2"
   },
