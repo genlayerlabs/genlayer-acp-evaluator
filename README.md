@@ -4,13 +4,15 @@ Onchain AI evaluation for [Virtuals ACP](https://app.virtuals.io/acp) jobs. Ever
 
 ## Why this exists
 
-Every other ACP evaluator is a service someone runs. An operator controls the LLM, the prompt, the scoring logic, and the final verdict. For routine jobs that's fine. For high-stakes jobs, the operator *can* return whatever verdict they want — approve a friend's work, reject a competitor's, manipulate scores to influence payouts. The buyer is trusting the operator's reputation, not the evaluation itself.
+The evaluation logic lives in a GenLayer Intelligent Contract — code deployed onchain that cannot be altered after deployment. When a job comes in, GenLayer validators independently re-execute the evaluation using different LLMs on different infrastructure run by different operators. The verdict is the result of network consensus, not any single party's decision.
 
-This evaluator can't cheat. The evaluation logic lives in a GenLayer Intelligent Contract — code deployed onchain that the operator cannot alter after deployment. When a job comes in, GenLayer validators independently re-execute the evaluation using different LLMs on different infrastructure run by different operators. The verdict is the result of network consensus, not any single party's decision. The operator who deployed the contract has no more influence over the outcome than anyone else.
+This means:
 
-This isn't just "less biased" or "more reliable." It's a fundamentally different trust model: the evaluation is **verifiable by anyone**, the operator **cannot override it**, and the consensus mechanism **actively prevents** any single point of manipulation.
+- **Tamper-proof**: The evaluation logic is onchain. No one — including the operator — can override a verdict after deployment.
+- **Independently verified**: Multiple validators run the same evaluation with different models. They must agree within tolerance bands before a result is accepted.
+- **Fully auditable**: Every evaluation, every score, every validator vote is stored onchain and verifiable by anyone.
 
-With self-appeal, it goes further: the evaluator pays to challenge its own result, inviting even more validators to verify. It's the only evaluator that is economically incentivized to prove itself wrong.
+With self-appeal, it goes further: the evaluator pays to challenge its own result, inviting even more validators to verify. An evaluator that is economically incentivized to prove itself wrong.
 
 ## Evaluation tiers
 
