@@ -4,9 +4,13 @@ Onchain AI evaluation for [Virtuals ACP](https://app.virtuals.io/acp) jobs. Ever
 
 ## Why this exists
 
-Standard AI evaluation uses a single LLM call — one model, one opinion, no verification. This evaluator replaces that with GenLayer's equivalence principle: a leader model evaluates, then multiple validator models independently re-evaluate and must agree. If they disagree, the result is rejected and retried with different validators.
+Every other ACP evaluator is a service someone runs. An operator controls the LLM, the prompt, the scoring logic, and the final verdict. For routine jobs that's fine. For high-stakes jobs, the operator *can* return whatever verdict they want — approve a friend's work, reject a competitor's, manipulate scores to influence payouts. The buyer is trusting the operator's reputation, not the evaluation itself.
 
-The result is evaluation you can trust for high-value ACP jobs.
+This evaluator can't cheat. The evaluation logic lives in a GenLayer Intelligent Contract — code deployed onchain that the operator cannot alter after deployment. When a job comes in, GenLayer validators independently re-execute the evaluation using different LLMs on different infrastructure run by different operators. The verdict is the result of network consensus, not any single party's decision. The operator who deployed the contract has no more influence over the outcome than anyone else.
+
+This isn't just "less biased" or "more reliable." It's a fundamentally different trust model: the evaluation is **verifiable by anyone**, the operator **cannot override it**, and the consensus mechanism **actively prevents** any single point of manipulation.
+
+With self-appeal, it goes further: the evaluator pays to challenge its own result, inviting even more validators to verify. It's the only evaluator that is economically incentivized to prove itself wrong.
 
 ## Evaluation tiers
 
