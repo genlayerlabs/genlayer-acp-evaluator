@@ -46,6 +46,12 @@ export default function JobCard({
       <div className="scores-row">
         <ScoreRing value={job.result.score} label="Score" />
         <ScoreRing value={job.result.confidence} label="Confidence" />
+        {job.appeal_round !== undefined && job.appeal_round > 0 && (
+          <div className="appeal-indicator">
+            <div className="appeal-round-badge">{job.appeal_round}</div>
+            <span className="score-ring-label">APPEAL ROUND</span>
+          </div>
+        )}
       </div>
 
       <div className="reasoning">{job.result.reasoning}</div>
