@@ -19,6 +19,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=build-service /app/dist/ dist/
 COPY --from=build-dashboard /dashboard/dist/ dashboard/dist/
+COPY contracts/ contracts/
 
 EXPOSE 3000
 ENV NODE_ENV=production

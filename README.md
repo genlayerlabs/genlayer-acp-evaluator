@@ -76,33 +76,26 @@ The contract is immutable after deployment. No write methods, no admin functions
 - GenLayer environment (Studio / testnet)
 - Registered ACP agent at https://app.virtuals.io/acp/join (Role: Evaluator)
 
-### 1. Deploy contract
-
-```bash
-genlayer deploy --network studionet
-# Save the printed GENLAYER_EVALUATOR_ADDRESS
-```
-
-### 2. Register on ACP
+### 1. Register on ACP
 
 At https://app.virtuals.io/acp/join:
 - Role: **Evaluator**
 - Add offering: name, price ($0.10), SLA (10 min)
 - Note your Entity ID, Agent Wallet Address
 
-### 3. Configure and run
+### 2. Configure and run
 
 ```bash
 npm install
 cp .env.example .env
-# Fill in: GENLAYER_PRIVATE_KEY, GENLAYER_EVALUATOR_ADDRESS,
+# Fill in: GENLAYER_PRIVATE_KEY,
 #          ACP_WALLET_PRIVATE_KEY, ACP_ENTITY_ID, ACP_AGENT_WALLET_ADDRESS
 npm run dev
 ```
 
 The service starts Express on `:3000` (API + dashboard) and connects to ACP via WebSocket.
 
-### 4. Deploy to K8s
+### 3. Deploy with Docker
 
 ```bash
 docker build -t genlayer-acp-evaluator .

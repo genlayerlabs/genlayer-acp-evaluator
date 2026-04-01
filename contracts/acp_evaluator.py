@@ -27,13 +27,20 @@ class AcpEvaluator(gl.Contract):
         self.submission = submission
         self.rubric = rubric
         self.metadata_json = metadata_json
+        self.rubric_version = "v1"
+        self.success = False
+        self.verdict = "error"
+        self.score = u8(0)
+        self.confidence = u8(0)
+        self.reasoning = ""
 
-        metadata = json.loads(metadata_json) if metadata_json else {}
-        self.rubric_version = metadata.get("rubric_version", "v1")
-        score_tolerance = int(metadata.get("score_tolerance", 10))
-        confidence_tolerance = int(metadata.get("confidence_tolerance", 15))
+        try:
+            metadata = json.loads(metadata_json) if metadata_json else {}
+            self.rubric_version = metadata.get("rubric_version", "v1")
+            score_tolerance = int(metadata.get("score_tolerance", 10))
+            confidence_tolerance = int(metadata.get("confidence_tolerance", 15))
 
-        eval_prompt = f"""
+            eval_prompt = f"""
 You are evaluating a provider submission against a rubric.
 
 TASK SPEC:
@@ -46,54 +53,54 @@ RUBRIC:
 {rubric}
 
 Return strict JSON with:
-- verdict: one of "approve", "reject", "needs_review"
 - score: integer 0..100
 - confidence: integer 0..100
 - reasoning: short explanation
 """
 
-        def normalize(x: dict) -> dict:
-            return {
-                "verdict": x["verdict"],
-                "score": int(x["score"]),
-                "confidence": int(x["confidence"]),
-                "reasoning": x["reasoning"].strip(),
-            }
+            def normalize(x: dict) -> dict:
+                s = int(x["score"])
+                c = int(x["confidence"])
+                # Derive verdict from score band — never trust LLM verdict string
+                if s >= 70:
+                    v = "approve"
+                elif s >= 40:
+                    v = "needs_review"
+                else:
+                    v = "reject"
+                return {
+                    "verdict": v,
+                    "score": s,
+                    "confidence": c,
+                    "reasoning": x["reasoning"].strip(),
+                }
 
-        def band(s: int) -> str:
-            if s >= 70:
-                return "approve"
-            if s >= 40:
-                return "needs_review"
-            return "reject"
+            def leader_fn():
+                raw = gl.nondet.exec_prompt(eval_prompt, response_format="json")
+                return normalize(raw)
 
-        def leader_fn():
-            raw = gl.nondet.exec_prompt(eval_prompt, response_format="json")
-            return normalize(raw)
+            def validator_fn(leader_result) -> bool:
+                if not isinstance(leader_result, gl.vm.Return):
+                    return False
 
-        def validator_fn(leader_result) -> bool:
-            if not isinstance(leader_result, gl.vm.Return):
-                return False
+                proposed = leader_result.calldata
 
-            proposed = leader_result.calldata
+                if proposed["verdict"] not in ("approve", "reject", "needs_review"):
+                    return False
+                if not (0 <= proposed["score"] <= 100):
+                    return False
+                if not (0 <= proposed["confidence"] <= 100):
+                    return False
 
-            if proposed["verdict"] not in ("approve", "reject", "needs_review"):
-                return False
-            if not (0 <= proposed["score"] <= 100):
-                return False
-            if not (0 <= proposed["confidence"] <= 100):
-                return False
+                local_raw = gl.nondet.exec_prompt(eval_prompt, response_format="json")
+                local = normalize(local_raw)
 
-            local_raw = gl.nondet.exec_prompt(eval_prompt, response_format="json")
-            local = normalize(local_raw)
+                same_verdict = proposed["verdict"] == local["verdict"]
+                close_score = abs(proposed["score"] - local["score"]) <= score_tolerance
+                close_conf = abs(proposed["confidence"] - local["confidence"]) <= confidence_tolerance
 
-            same_band = band(proposed["score"]) == band(local["score"])
-            close_score = abs(proposed["score"] - local["score"]) <= score_tolerance
-            close_conf = abs(proposed["confidence"] - local["confidence"]) <= confidence_tolerance
+                return same_verdict and close_score and close_conf
 
-            return same_band and close_score and close_conf
-
-        try:
             result = gl.vm.run_nondet(leader_fn, validator_fn)
             self.verdict = result["verdict"]
             self.score = u8(result["score"])
@@ -101,11 +108,7 @@ Return strict JSON with:
             self.reasoning = result["reasoning"]
             self.success = True
         except Exception as e:
-            self.verdict = "error"
-            self.score = u8(0)
-            self.confidence = u8(0)
             self.reasoning = str(e)
-            self.success = False
 
     @gl.public.view
     def get_result(self) -> dict:
