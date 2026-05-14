@@ -12,11 +12,12 @@
     "test:integration": "vitest run tests/integration/ --testTimeout 300000 --config vitest.integration.config.ts"
   },
   "dependencies": {
-    "@virtuals-protocol/acp-node": "^0.3.0-beta.39",
+    "@account-kit/infra": "^4.88.2",
+    "@virtuals-protocol/acp-node-v2": "^0.1.2",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
     "genlayer-js": "^0.28.0",
-    "viem": "^2.23.6",
+    "viem": "^2.48.11",
     "zod": "^3.24.2"
   },
   "devDependencies": {

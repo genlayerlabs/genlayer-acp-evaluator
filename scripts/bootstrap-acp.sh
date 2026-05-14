@@ -4,7 +4,7 @@ set -euo pipefail
 echo "== GenLayer ACP Evaluator — Setup Guide =="
 
 echo
-echo "1) Register agent at https://app.virtuals.io/acp/join"
+echo "1) Register agent at https://app.virtuals.io/acp/new"
 echo "   - Connect Base wallet"
 echo "   - Register New Agent"
 echo "   - Role: Evaluator"
@@ -21,9 +21,10 @@ echo "     Intelligent Contracts with validator-based equivalence checks"
 
 echo
 echo "3) Note your credentials:"
-echo "   - ACP_WALLET_PRIVATE_KEY  (your whitelisted wallet)"
-echo "   - ACP_ENTITY_ID           (from agent dashboard)"
 echo "   - ACP_AGENT_WALLET_ADDRESS (your agent's smart wallet)"
+echo "   - ACP_WALLET_ID            (from the agent Signers tab)"
+echo "   - ACP_SIGNER_PRIVATE_KEY   (generated from + Add Signer)"
+echo "   - ACP_BUILDER_CODE         (optional, from Settings)"
 
 echo
 echo "4) Deploy GenLayer contract:"

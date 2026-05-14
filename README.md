@@ -38,18 +38,18 @@ Each appeal round roughly doubles the validator count. The cost grows exponentia
 ## Architecture
 
 ```
-ACP WebSocket → onEvaluate callback
+ACP v2 SSE → job.submitted entry
   → Express service deploys a fresh GenLayer contract
   → Constructor runs LLM evaluation during deployment
   → Leader evaluates + validators re-evaluate (equivalence principle)
   → Consensus reached → result stored immutably at contract address
-  → job.evaluate(approved, reasoning) → returned to ACP
+  → session.complete(txHash) / session.reject(txHash) → returned to ACP
   → Dashboard shows result at /#/job/<id>
 ```
 
 Each evaluation deploys its own contract — one contract, one evaluation, one address. No shared state, no queue contention. If an appeal is filed on one evaluation, it doesn't affect any other.
 
-Single container serves everything: Express API, ACP WebSocket listener, and the dashboard static build.
+Single container serves everything: Express API, ACP v2 SSE listener, and the dashboard static build.
 
 ## How the contract works
 
@@ -74,14 +74,14 @@ The contract is immutable after deployment. No write methods, no admin functions
 - Node 20+
 - Python 3.12+
 - GenLayer environment (Studio / testnet)
-- Registered ACP agent at https://app.virtuals.io/acp/join (Role: Evaluator)
+- Registered ACP agent at https://app.virtuals.io/acp/new (Role: Evaluator)
 
 ### 1. Register on ACP
 
-At https://app.virtuals.io/acp/join:
+At https://app.virtuals.io/acp/new:
 - Role: **Evaluator**
 - Add offering: name, price ($0.10), SLA (10 min)
-- Note your Entity ID, Agent Wallet Address
+- Note your Agent Wallet Address, Wallet ID, and Signer Private Key
 
 ### 2. Configure and run
 
@@ -89,11 +89,11 @@ At https://app.virtuals.io/acp/join:
 npm install
 cp .env.example .env
 # Fill in: GENLAYER_PRIVATE_KEY,
-#          ACP_WALLET_PRIVATE_KEY, ACP_ENTITY_ID, ACP_AGENT_WALLET_ADDRESS
+#          ACP_AGENT_WALLET_ADDRESS, ACP_WALLET_ID, ACP_SIGNER_PRIVATE_KEY
 npm run dev
 ```
 
-The service starts Express on `:3000` (API + dashboard) and connects to ACP via WebSocket.
+The service starts Express on `:3000` (API + dashboard) and connects to ACP via the v2 SSE stream.
 
 ### 3. Deploy with Docker
 
@@ -131,7 +131,7 @@ Pages:
 ## Tech stack
 
 - **GenLayer** — AI-native blockchain with multi-LLM consensus
-- **Virtuals ACP** — Agent Commerce Protocol (`@virtuals-protocol/acp-node`)
+- **Virtuals ACP** — Agent Commerce Protocol (`@virtuals-protocol/acp-node-v2`)
 - **genlayer-js** — TypeScript SDK for GenLayer
 - **Express** — API + static dashboard server
 - **React + Vite** — dashboard frontend
