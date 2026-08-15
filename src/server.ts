@@ -14,7 +14,8 @@ app.use(express.static(dashboardPath));
 
 function authOk(req: express.Request) {
   const token = process.env.API_AUTH_TOKEN;
-  if (!token) return true;
+  // Security fix: Deny access if the token is not configured.
+  if (!token) return false;
   return req.headers.authorization === `Bearer ${token}`;
 }
 
@@ -38,14 +39,17 @@ app.post("/acp/evaluate", async (req, res) => {
         const refreshed = await readResult(contractAddress);
         updateRecord(parsed.jobId, { finalized: true, result: refreshed });
       })
-      .catch(() => {});
+      .catch((err) => {
+        // Error is not swallowed; it is logged and the record is marked as 'finality_unknown'.
+        console.error(`Finality check failed for job ${parsed.jobId}, txHash ${txHash}:`, err);
+        updateRecord(parsed.jobId, { finalized: false, result: "finality_unknown" });
+      });
 
     return res.json({ txHash, contractAddress, finalized: false, result });
   } catch (err) {
-    console.error(err);
-    return res.status(400).json({
-      error: err instanceof Error ? err.message : "unknown_error",
-    });
+    console.error("[POST /acp/evaluate] Error:", err);
+    // Sensitive error details are not leaked to the client; a stable error code is returned.
+    return res.status(400).json({ error: "evaluation_failed" });
   }
 });
 
@@ -77,10 +81,8 @@ app.get("/evaluations/:jobId", async (req, res) => {
       result,
     });
   } catch (err) {
-    console.error(err);
-    return res.status(404).json({
-      error: err instanceof Error ? err.message : "not_found",
-    });
+    console.error(`[GET /evaluations/${req.params.jobId}] Error:`, err);
+    return res.status(404).json({ error: "not_found" });
   }
 });
 
@@ -100,10 +102,8 @@ app.post("/evaluations/:jobId/appeal", async (req, res) => {
       contractAddress: record.contractAddress,
     });
   } catch (err) {
-    console.error(err);
-    return res.status(400).json({
-      error: err instanceof Error ? err.message : "appeal_failed",
-    });
+    console.error(`[POST /evaluations/${req.params.jobId}/appeal] Error:`, err);
+    return res.status(400).json({ error: "appeal_failed" });
   }
 });
 
